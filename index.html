@@ -406,7 +406,7 @@ document.addEventListener('touchend', e => {
 
 // ===== Supabase =====
 const SUPABASE_URL  = 'https://tlpzztuxttsobhqprosk.supabase.co';
-const SUPABASE_ANON = 'YOUR_ANON_KEY_HERE';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRscHp6dHV4dHRzb2JocXByb3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2Mzg2NDQsImV4cCI6MjA5MzIxNDY0NH0.gMP2SO2NCnbWbknHMObs11Z8vWH3Wa6_3bAGobV9_GU';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
     persistSession: false,
