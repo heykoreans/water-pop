@@ -389,6 +389,8 @@ body{font-family:'Quicksand',-apple-system,BlinkMacSystemFont,system-ui,sans-ser
   </div>
 </div>
 
+<audio id="bgm" src="Bubbles.mp3" loop preload="auto"></audio>
+
 <script>
 'use strict';
 
@@ -483,6 +485,25 @@ const SFX = {
     ['G4','E4','C4','A3'].forEach((n,i)=>synthMain.triggerAttackRelease(n,'8n', Tone.now()+i*.12));
   },
 };
+
+// ===== BGM =====
+const bgm = document.getElementById('bgm');
+if(bgm){
+  bgm.volume = 0.35;
+  bgm.addEventListener('error', e => console.error('BGM load error:', e));
+}
+function playBGM(){
+  if(!bgm || !soundOn) return;
+  bgm.currentTime = 0;
+  const p = bgm.play();
+  if(p && p.catch) p.catch(err => console.log('BGM autoplay blocked:', err));
+}
+function pauseBGM(){ if(bgm) bgm.pause(); }
+function stopBGM(){
+  if(!bgm) return;
+  bgm.pause();
+  bgm.currentTime = 0;
+}
 
 // ===== LocalStorage =====
 const LSKEY = 'waterpop_player';
@@ -674,6 +695,7 @@ function dive(){
     G.started = true;
     G.startTime = performance.now();
     document.getElementById('game-overlay').classList.add('hidden');
+    playBGM();
   }
   G.player.vy = PHYSICS.DIVE_IMPULSE;
   SFX.dive();
@@ -711,6 +733,7 @@ function spawnObstacle(x){
 function gameOver(){
   G.active = false;
   SFX.hit();
+  pauseBGM();
   cancelAnimationFrame(G.frameId);
   setTimeout(() => endGame(), 600);
 }
@@ -1045,6 +1068,7 @@ document.getElementById('replay-btn').addEventListener('click', async () => {
 });
 document.getElementById('result-home').addEventListener('click', () => {
   document.getElementById('result-modal').classList.add('hidden');
+  stopBGM();
   show('home-screen'); renderHome();
 });
 
@@ -1052,6 +1076,8 @@ document.getElementById('result-home').addEventListener('click', () => {
 document.getElementById('sound-btn').addEventListener('click', () => {
   soundOn = !soundOn;
   document.getElementById('sound-btn').textContent = soundOn ? '🔊' : '🔇';
+  if(!soundOn) pauseBGM();
+  else if(G.active && G.started) playBGM();
 });
 
 // ===== Leaderboard =====
