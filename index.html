@@ -203,6 +203,57 @@ body{font-family:'Quicksand',-apple-system,BlinkMacSystemFont,system-ui,sans-ser
   padding:2px 6px;border-radius:8px;font-weight:700}
 .lb-score{font-size:18px;font-weight:700;color:var(--coral-deep)}
 .lb-empty{text-align:center;padding:40px;color:var(--muted);font-size:15px}
+
+/* SEADEX */
+#seadex-screen{padding:20px;background:linear-gradient(180deg,#DEF5FA,#B8E5F0);overflow-y:auto;gap:14px}
+.sd-header{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.sd-back{background:none;border:none;font-size:24px;cursor:pointer;color:var(--ink);
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.sd-back:active{background:var(--shallow)}
+.sd-title{font-size:22px;font-weight:700}
+.sd-sub{font-size:13px;color:var(--muted);margin-top:-6px;margin-bottom:4px;padding-left:48px}
+.sd-preview{background:var(--white);border:2px solid var(--shallow);border-radius:20px;
+  padding:18px 12px 14px;text-align:center}
+.sd-preview-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1.5px}
+.sd-preview-visual{height:108px;display:flex;align-items:center;justify-content:center;
+  margin:8px 0 4px;font-size:80px;line-height:1}
+.sd-preview-visual svg{width:84px;height:auto}
+.sd-preview-name{font-size:18px;font-weight:700;color:var(--ink)}
+.sd-preview-hint{font-size:12px;color:var(--muted);margin-top:2px}
+.sd-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sd-card{position:relative;background:var(--white);border:2px solid var(--shallow);
+  border-radius:14px;padding:10px 4px 8px;text-align:center;cursor:pointer;
+  transition:transform .15s,border-color .15s,background .15s;font-family:inherit}
+.sd-card:active{transform:scale(.96)}
+.sd-card.selected{background:var(--pearl);border-color:var(--coral-deep);
+  box-shadow:0 0 0 3px rgba(255,139,111,.18)}
+.sd-card .sd-vis{height:48px;display:flex;align-items:center;justify-content:center;font-size:36px;line-height:1}
+.sd-card .sd-vis svg{width:40px;height:auto}
+.sd-card .sd-name{font-size:12px;font-weight:700;color:var(--ink);margin-top:4px}
+.sd-card.selected .sd-name{color:var(--coral-deep)}
+.sd-badge{position:absolute;top:4px;right:4px;background:var(--coral-deep);color:#fff;
+  font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;line-height:1.4}
+.sd-confirm{display:block;width:100%;padding:14px;background:var(--coral-deep);color:#fff;
+  font-size:16px;font-weight:700;border:none;border-radius:14px;cursor:pointer;
+  font-family:inherit;letter-spacing:.3px}
+.sd-confirm:active{transform:scale(.98)}
+.sd-confirm:disabled{opacity:.5;cursor:default;transform:none}
+@media(max-width:360px){.sd-grid{grid-template-columns:repeat(4,1fr);gap:6px}
+  .sd-card{padding:8px 2px 6px}.sd-card .sd-vis{font-size:30px;height:42px}
+  .sd-card .sd-name{font-size:11px}}
+
+/* HOME — character entry button */
+.home-charbtn{display:flex;align-items:center;gap:10px;background:var(--white);
+  border:2px solid var(--shallow);border-radius:var(--r);padding:10px 14px;
+  cursor:pointer;font-family:inherit;width:100%;transition:transform .12s}
+.home-charbtn:active{transform:scale(.98)}
+.home-charbtn-icon{width:36px;height:36px;border-radius:50%;background:var(--bg-light);
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.home-charbtn-icon svg{width:30px;height:auto}
+.home-charbtn-text{flex:1;text-align:left}
+.home-charbtn-label{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:1px}
+.home-charbtn-name{font-size:15px;font-weight:700;color:var(--ink);margin-top:1px}
+.home-charbtn-arrow{color:var(--muted);font-size:18px;font-weight:700}
 </style>
 </head>
 <body>
@@ -295,6 +346,15 @@ body{font-family:'Quicksand',-apple-system,BlinkMacSystemFont,system-ui,sans-ser
       </div>
     </div>
 
+    <button class="home-charbtn" id="char-btn">
+      <div class="home-charbtn-icon" id="char-btn-icon">🐴</div>
+      <div class="home-charbtn-text">
+        <div class="home-charbtn-label">SEADEX</div>
+        <div class="home-charbtn-name" id="char-btn-name">해마</div>
+      </div>
+      <div class="home-charbtn-arrow">›</div>
+    </button>
+
     <button class="btn btn-coral" id="play-btn">🌊 Free Play</button>
     <button class="btn btn-aqua"  id="lb-btn">🏆 Leaderboard</button>
     <button class="btn btn-ghost" id="howto-btn">❓ How to Play</button>
@@ -315,7 +375,7 @@ body{font-family:'Quicksand',-apple-system,BlinkMacSystemFont,system-ui,sans-ser
     <canvas id="game-canvas"></canvas>
     <div class="game-overlay" id="game-overlay">
       <div class="game-overlay-inner">
-        <div class="game-overlay-title">🐴 Tap to Dive!</div>
+        <div class="game-overlay-title" id="game-overlay-title">🐴 Tap to Dive!</div>
         <div class="game-overlay-sub" id="game-overlay-sub">Avoid the corals · Pass to score</div>
       </div>
     </div>
@@ -332,6 +392,25 @@ body{font-family:'Quicksand',-apple-system,BlinkMacSystemFont,system-ui,sans-ser
       <button class="lb-tab" data-range="daily">Today</button>
     </div>
     <div id="lb-list"><div class="lb-empty">Loading...</div></div>
+  </div>
+
+  <div class="screen" id="seadex-screen">
+    <div class="sd-header">
+      <button class="sd-back" id="sd-back" aria-label="Back">←</button>
+      <div class="sd-title">🌊 SeaDex</div>
+    </div>
+    <div class="sd-sub">바다 친구를 골라 함께 떠나요</div>
+
+    <div class="sd-preview">
+      <div class="sd-preview-label">CURRENT</div>
+      <div class="sd-preview-visual" id="sd-preview-visual"></div>
+      <div class="sd-preview-name" id="sd-preview-name">해마</div>
+      <div class="sd-preview-hint" id="sd-preview-hint">코로넷 3개 · 카와이 chibi 비율</div>
+    </div>
+
+    <div class="sd-grid" id="sd-grid"></div>
+
+    <button class="sd-confirm" id="sd-confirm">선택 완료</button>
   </div>
 </div>
 
@@ -418,6 +497,34 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
   realtime: { params: { eventsPerSecond: 1 } },
 });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ===== Character system (SeaDex) =====
+const SEAHORSE_SVG_INLINE = `<svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M 45 90 Q 28 100, 28 115 Q 32 125, 50 123 Q 62 120, 58 110" fill="#4FB8C0" stroke="#1F3A5F" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M 38 62 Q 33 78, 40 92 Q 50 96, 60 92 Q 66 78, 60 62 Z" fill="#4FB8C0" stroke="#1F3A5F" stroke-width="2.5" stroke-linejoin="round"/><path d="M 41 72 Q 50 74, 58 72" fill="none" stroke="#1F3A5F" stroke-width="1.2" opacity="0.4"/><path d="M 41 82 Q 50 84, 58 82" fill="none" stroke="#1F3A5F" stroke-width="1.2" opacity="0.4"/><path d="M 62 64 Q 76 66, 72 76 Q 66 76, 62 73 Z" fill="#FF8B6F" stroke="#1F3A5F" stroke-width="2" stroke-linejoin="round"/><ellipse cx="48" cy="38" rx="30" ry="28" fill="#7DD3D8" stroke="#1F3A5F" stroke-width="2.5"/><path d="M 22 40 Q 12 41, 12 47 Q 18 50, 25 46 Z" fill="#7DD3D8" stroke="#1F3A5F" stroke-width="2.5" stroke-linejoin="round"/><path d="M 36 14 L 39 4 L 42 14 Z" fill="#FF8B6F" stroke="#1F3A5F" stroke-width="2" stroke-linejoin="round"/><path d="M 46 11 L 49 1 L 52 11 Z" fill="#FF8B6F" stroke="#1F3A5F" stroke-width="2" stroke-linejoin="round"/><path d="M 56 14 L 59 5 L 62 14 Z" fill="#FF8B6F" stroke="#1F3A5F" stroke-width="2" stroke-linejoin="round"/><ellipse cx="34" cy="48" rx="4.5" ry="2.8" fill="#FF9AA2" opacity="0.75"/><circle cx="42" cy="35" r="9.5" fill="#FFFFFF" stroke="#1F3A5F" stroke-width="2"/><circle cx="43" cy="37" r="6.5" fill="#1F3A5F"/><circle cx="44.5" cy="35" r="2.5" fill="#FFFFFF"/><circle cx="40.8" cy="40" r="1" fill="#FFFFFF"/><ellipse cx="16" cy="46" rx="1.6" ry="2.2" fill="#1F3A5F"/></svg>`;
+
+const CHARACTERS = [
+  { id:'seahorse', name:'해마',     type:'svg',   ico:'🐴', hint:'코로넷 3개 · 카와이 chibi 비율' },
+  { id:'fish',     name:'열대어',   type:'emoji', ico:'🐠', hint:'산호초의 단골 손님' },
+  { id:'puffer',   name:'복어',     type:'emoji', ico:'🐡', hint:'위험할 땐 풍선처럼' },
+  { id:'turtle',   name:'거북이',   type:'emoji', ico:'🐢', hint:'느려도 꾸준한 모험가' },
+  { id:'octopus',  name:'문어',     type:'emoji', ico:'🐙', hint:'8개의 다리로 유유히' },
+  { id:'dolphin',  name:'돌고래',   type:'emoji', ico:'🐬', hint:'바다의 인기쟁이' },
+  { id:'crab',     name:'꽃게',     type:'emoji', ico:'🦀', hint:'옆으로 콩콩 점프' },
+  { id:'shark',    name:'아기상어', type:'emoji', ico:'🦈', hint:'뚜루루 뚜루' },
+];
+
+// 해마 SVG → 캔버스용 Image 미리 디코드
+const seahorseImg = new Image();
+seahorseImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(SEAHORSE_SVG_INLINE);
+
+const LSCHAR = 'waterpop_character';
+function getCurrentCharId(){
+  if(player && player.character) return player.character;
+  return localStorage.getItem(LSCHAR) || 'seahorse';
+}
+function getCurrentChar(){
+  const id = getCurrentCharId();
+  return CHARACTERS.find(c => c.id === id) || CHARACTERS[0];
+}
 
 // ===== Daily challenge: deterministic PRNG (Eastern Time) =====
 function dailyDateStr(){
@@ -534,6 +641,8 @@ function ensurePlayerDefaults(p){
     p.best_combo = p.best_combo || 0;
     p.last_daily_date = p.last_daily_date || null;
     p.last_daily_score = p.last_daily_score || 0;
+    p.character = p.character || localStorage.getItem(LSCHAR) || 'seahorse';
+    localStorage.setItem(LSCHAR, p.character);
   }
   return p;
 }
@@ -584,8 +693,26 @@ document.getElementById('su-btn').addEventListener('click', e => { e.preventDefa
 function renderHome(){
   document.getElementById('home-callsign').textContent = player.callsign;
   document.getElementById('home-best').textContent = player.best_score.toLocaleString();
+  syncCharacterUI();
   renderDailyCard();
   show('home-screen');
+}
+function syncCharacterUI(){
+  const c = getCurrentChar();
+  // home avatar circle (top of player card)
+  const avatar = document.getElementById('home-avatar');
+  if(avatar) avatar.textContent = c.ico;
+  // SeaDex entry button on home
+  const btnIcon = document.getElementById('char-btn-icon');
+  const btnName = document.getElementById('char-btn-name');
+  if(btnIcon){
+    if(c.type === 'svg') btnIcon.innerHTML = SEAHORSE_SVG_INLINE;
+    else btnIcon.textContent = c.ico;
+  }
+  if(btnName) btnName.textContent = c.name;
+  // Game overlay title
+  const gt = document.getElementById('game-overlay-title');
+  if(gt) gt.textContent = `${c.ico} Tap to Dive!`;
 }
 function renderDailyCard(){
   const today = dailyDateStr();
@@ -617,6 +744,60 @@ document.getElementById('daily-btn').addEventListener('click', async () => {
 document.getElementById('lb-btn').addEventListener('click', () => { show('lb-screen'); loadLeaderboard(); });
 document.getElementById('lb-back').addEventListener('click', () => { show('home-screen'); renderHome(); });
 document.getElementById('howto-btn').addEventListener('click', () => alert('How to Play\n\nThe seahorse rises naturally with buoyancy.\nTap to dive down.\nNavigate through coral gaps to score.\nPass 3 in a row → ×2 combo.\nPass 6 in a row → ×3 combo.\n\nDaily Challenge: same reef for everyone, one shot per day. Build your streak!'));
+
+// ===== SeaDex =====
+let _pendingChar = 'seahorse';
+function openSeadex(){
+  _pendingChar = getCurrentCharId();
+  renderSeadex();
+  show('seadex-screen');
+}
+function renderSeadex(){
+  const grid = document.getElementById('sd-grid');
+  grid.innerHTML = CHARACTERS.map(c => {
+    const sel = c.id === _pendingChar ? ' selected' : '';
+    const badge = c.id === _pendingChar ? '<div class="sd-badge">선택</div>' : '';
+    const vis = c.type === 'svg' ? SEAHORSE_SVG_INLINE : c.ico;
+    return `<button class="sd-card${sel}" data-id="${c.id}" type="button">
+      ${badge}<div class="sd-vis">${vis}</div><div class="sd-name">${c.name}</div></button>`;
+  }).join('');
+  grid.querySelectorAll('.sd-card').forEach(el => {
+    el.addEventListener('click', () => pickCharacter(el.dataset.id));
+  });
+  // preview
+  const sel = CHARACTERS.find(c => c.id === _pendingChar) || CHARACTERS[0];
+  const pv = document.getElementById('sd-preview-visual');
+  pv.innerHTML = sel.type === 'svg' ? SEAHORSE_SVG_INLINE : sel.ico;
+  document.getElementById('sd-preview-name').textContent = sel.name;
+  document.getElementById('sd-preview-hint').textContent = sel.hint;
+}
+function pickCharacter(id){
+  if(!CHARACTERS.find(c => c.id === id)) return;
+  _pendingChar = id;
+  renderSeadex();
+}
+async function confirmCharacter(){
+  const btn = document.getElementById('sd-confirm');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  // 1) localStorage (always works, instant)
+  localStorage.setItem(LSCHAR, _pendingChar);
+  // 2) update player object + Supabase (best effort)
+  if(player){
+    player.character = _pendingChar;
+    save(player);
+    try {
+      await patchPlayer(player.id, { character: _pendingChar });
+    } catch(e){
+      console.warn('character sync failed (column may not exist yet):', e?.message || e);
+    }
+  }
+  btn.disabled = false; btn.textContent = '선택 완료';
+  show('home-screen');
+  renderHome();
+}
+document.getElementById('char-btn').addEventListener('click', openSeadex);
+document.getElementById('sd-back').addEventListener('click', () => { show('home-screen'); renderHome(); });
+document.getElementById('sd-confirm').addEventListener('click', confirmCharacter);
 
 // ===== GAME =====
 const G = {
@@ -868,8 +1049,8 @@ function render(){
     ctx.restore();
   }
 
-  // Player (seahorse)
-  drawSeahorse(G.player.x, G.player.y, G.player.rotation);
+  // Player (seahorse or chosen sea creature)
+  drawPlayer(G.player.x, G.player.y, G.player.rotation);
 }
 
 function drawCoral(ob){
@@ -919,85 +1100,30 @@ function drawCoralPillar(x, y, w, h, pointUp){
   }
 }
 
-function drawSeahorse(cx, cy, rot){
+function drawPlayer(cx, cy, rot){
   const ctx = G.ctx;
+  const c = getCurrentChar();
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(rot);
-  ctx.scale(0.4, 0.4);
-  // Recreate the seahorse from SVG, simplified
-  // Body
-  ctx.fillStyle = '#FFB199';
-  ctx.strokeStyle = '#FF8B6F';
-  ctx.lineWidth = 3.5;
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(-15, -50);
-  ctx.bezierCurveTo(-45, -40, -55, -5, -45, 30);
-  ctx.bezierCurveTo(-40, 65, -25, 85, 0, 90);
-  ctx.bezierCurveTo(30, 90, 40, 65, 35, 35);
-  ctx.bezierCurveTo(30, 10, 25, -15, 30, -35);
-  ctx.bezierCurveTo(25, -55, 5, -60, -15, -50);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  // Head
-  ctx.beginPath();
-  ctx.ellipse(-15, -50, 36, 32, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.stroke();
-  // Snout
-  ctx.beginPath();
-  ctx.ellipse(23, -45, 22, 11, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.stroke();
-  // Coronet
-  ctx.fillStyle = '#FF8B6F';
-  ctx.beginPath();
-  ctx.moveTo(-37, -78); ctx.lineTo(-29, -88); ctx.lineTo(-23, -80);
-  ctx.lineTo(-15, -92); ctx.lineTo(-7, -80); ctx.lineTo(1, -90);
-  ctx.lineTo(7, -78); ctx.closePath();
-  ctx.fill();
-  // Eye
-  ctx.fillStyle = '#1A2E4E';
-  ctx.beginPath();
-  ctx.arc(0, -54, 6, 0, Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle = '#FFFFFF';
-  ctx.beginPath();
-  ctx.arc(2, -56, 2, 0, Math.PI*2);
-  ctx.fill();
-  // Mouth dot at snout tip
-  ctx.fillStyle = '#FF8B6F';
-  ctx.beginPath();
-  ctx.arc(43, -45, 2.5, 0, Math.PI*2);
-  ctx.fill();
-  // Pectoral fin
-  ctx.fillStyle = '#FFE5C2';
-  ctx.strokeStyle = '#FF8B6F';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(37, -15);
-  ctx.quadraticCurveTo(63, -20, 57, 8);
-  ctx.quadraticCurveTo(40, 3, 35, -10);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  // Curled tail
-  ctx.fillStyle = '#FFB199';
-  ctx.lineWidth = 3.5;
-  ctx.beginPath();
-  ctx.moveTo(0, 90);
-  ctx.quadraticCurveTo(30, 105, 30, 122);
-  ctx.quadraticCurveTo(15, 136, 0, 128);
-  ctx.quadraticCurveTo(-10, 112, -5, 95);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = '#FFE5C2';
-  ctx.beginPath();
-  ctx.arc(15, 115, 4, 0, Math.PI*2);
-  ctx.fill();
+  if(c.type === 'svg'){
+    // chibi seahorse — 36x47px on canvas (about half the previous size)
+    if(seahorseImg.complete && seahorseImg.naturalWidth){
+      ctx.drawImage(seahorseImg, -18, -23, 36, 47);
+    } else {
+      // fallback while SVG decodes (rare; first frame only)
+      ctx.font = '32px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🐴', 0, 0);
+    }
+  } else {
+    // emoji characters — rendered at 36px
+    ctx.font = '36px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(c.ico, 0, 0);
+  }
   ctx.restore();
 }
 
