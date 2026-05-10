@@ -1,0 +1,1127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>WATER POP — Tap to dive</title>
+<meta name="description" content="Tap to dive a buoyant seahorse through coral reefs. Daily challenge, combos, leaderboards.">
+<meta property="og:title" content="WATER POP">
+<meta property="og:description" content="Tap to dive a buoyant seahorse through coral reefs. 60-second runs, daily challenge, leaderboards.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://waterpop.mybumo.com">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/tone@14"></script>
+<style>
+:root{
+  --aqua:#5DD4E0; --aqua-deep:#2EA39E;
+  --coral:#FFB199; --coral-deep:#FF8B6F;
+  --deep:#1F4068; --shallow:#B8E5F0;
+  --sand:#FFE5C2; --pearl:#FFF3F0;
+  --bg-light:#DEF5FA; --bg-mid:#B8E5F0;
+  --white:#FFFFFF; --ink:#1A2E4E; --muted:#5A6B8C;
+  --r:18px;
+  --shadow:0 6px 24px rgba(31,64,104,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
+body{font-family:'Quicksand',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  color:var(--ink);background:linear-gradient(180deg,#DEF5FA 0%,#B8E5F0 50%,#5DD4E0 100%);
+  display:flex;align-items:center;justify-content:center;
+  -webkit-text-size-adjust:100%;text-size-adjust:100%}
+
+#app{width:100%;max-width:460px;height:100svh;max-height:820px;
+  display:flex;flex-direction:column;position:relative;overflow:hidden;background:var(--white)}
+@media(min-width:600px){
+  #app{border-radius:28px;height:780px;margin:20px auto;box-shadow:0 0 60px rgba(31,64,104,.15)}
+  body{overflow:auto;align-items:flex-start;padding:20px 0 40px}
+}
+
+.screen{display:none;flex-direction:column;flex:1;overflow:hidden}
+.screen.active{display:flex}
+
+#loading-screen{align-items:center;justify-content:center;gap:16px;
+  background:linear-gradient(180deg,#DEF5FA,#B8E5F0)}
+.loading-spinner{width:48px;height:48px;border:4px solid var(--shallow);
+  border-top-color:var(--aqua-deep);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--muted);font-size:14px;font-weight:600}
+
+/* HOME */
+#home-screen{padding:20px;gap:16px;
+  background:linear-gradient(180deg,#DEF5FA 0%,#B8E5F0 70%,#5DD4E0 100%);overflow-y:auto}
+.home-hero{display:flex;align-items:center;justify-content:center;gap:14px;margin:6px 0 4px}
+.home-mascot{width:108px;height:120px;display:block;flex-shrink:0;
+  filter:drop-shadow(0 4px 8px rgba(31,64,104,.18))}
+.home-text{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+.home-title{font-size:46px;font-weight:700;letter-spacing:-.5px;text-align:left;
+  background:linear-gradient(135deg,var(--coral-deep),var(--aqua-deep));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+.home-tagline{font-size:13px;color:var(--muted);margin-top:5px;text-align:left;line-height:1.35}
+@media (max-width:360px){
+  .home-mascot{width:88px;height:100px}
+  .home-title{font-size:40px}
+  .home-tagline{font-size:12px}
+  .home-hero{gap:10px}
+}
+
+.player-card{width:100%;background:var(--white);border:2px solid var(--shallow);
+  border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;
+  box-shadow:0 2px 8px rgba(31,64,104,.06)}
+.player-avatar{width:44px;height:44px;border-radius:50%;background:var(--shallow);
+  display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.player-callsign{font-size:20px;font-weight:700}
+.player-sub{font-size:13px;color:var(--muted);margin-top:2px}
+
+.daily-card{position:relative;width:100%;border-radius:20px;overflow:hidden;
+  background:linear-gradient(135deg,#FFE680 0%,#FFB199 50%,#5DD4E0 100%);
+  padding:2px;box-shadow:0 6px 20px rgba(255,140,100,.25),0 2px 6px rgba(31,64,104,.08)}
+.daily-card-glow{position:absolute;inset:-50%;
+  background:conic-gradient(from 0deg, transparent 0deg, rgba(255,215,0,.3) 90deg, transparent 180deg, rgba(93,212,224,.3) 270deg, transparent 360deg);
+  animation:dailyGlow 6s linear infinite;pointer-events:none}
+@keyframes dailyGlow{to{transform:rotate(360deg)}}
+.daily-card-content{position:relative;background:var(--white);
+  border-radius:18px;padding:14px 16px}
+.daily-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.daily-card-label{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.4px}
+.daily-card-streak{font-size:12px;font-weight:700;color:var(--coral-deep)}
+.daily-card-body{font-size:12px;color:var(--muted);line-height:1.45;margin-bottom:10px}
+.daily-card-btn{width:100%;padding:11px;border:none;border-radius:14px;
+  background:linear-gradient(135deg,#FFB199,#5DD4E0);color:var(--white);
+  font-family:inherit;font-size:14px;font-weight:700;letter-spacing:1.5px;
+  cursor:pointer;transition:transform .12s;
+  box-shadow:0 3px 0 rgba(255,140,100,.4)}
+.daily-card-btn:active{transform:scale(.97)}
+.daily-card-btn:disabled{opacity:.7;cursor:not-allowed;transform:none;
+  background:linear-gradient(135deg,#C5C5C5,#9E9E9E);box-shadow:0 3px 0 rgba(31,64,104,.15)}
+.daily-card.done .daily-card-glow{animation:none;opacity:.3}
+
+.btn{width:100%;padding:14px;border:none;border-radius:var(--r);font-family:inherit;
+  font-size:18px;font-weight:600;cursor:pointer;transition:transform .12s,opacity .15s}
+.btn:active{transform:scale(.96)}
+.btn-coral{background:var(--coral-deep);color:var(--white);box-shadow:0 4px 16px rgba(255,140,100,.4)}
+.btn-aqua{background:var(--aqua-deep);color:var(--white);box-shadow:0 4px 16px rgba(46,163,158,.4)}
+.btn-ghost{background:transparent;color:var(--muted);border:2px solid var(--shallow)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* GAME */
+#game-screen{position:relative;background:linear-gradient(180deg,#5DD4E0 0%,#2EA39E 60%,#1F4068 100%)}
+#game-canvas{display:block;width:100%;height:100%;touch-action:none;cursor:pointer}
+.hud{position:absolute;top:14px;left:14px;right:14px;
+  display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
+  pointer-events:none;z-index:10}
+.hud-card{background:rgba(255,255,255,.88);backdrop-filter:blur(8px);
+  border-radius:14px;padding:8px 14px;
+  box-shadow:0 2px 10px rgba(31,64,104,.15);min-width:80px;text-align:center}
+.hud-label{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:1px}
+.hud-value{font-size:22px;font-weight:700;color:var(--ink);line-height:1.1}
+.hud-combo{background:linear-gradient(135deg,#FFE680,#FFB199);box-shadow:0 2px 12px rgba(255,140,100,.4)}
+.hud-combo .hud-label{color:rgba(255,255,255,.95)}
+.hud-combo .hud-value{color:var(--white);text-shadow:0 1px 2px rgba(0,0,0,.15)}
+.hud-combo.idle{background:rgba(255,255,255,.88)}
+.hud-combo.idle .hud-label{color:var(--muted)}
+.hud-combo.idle .hud-value{color:var(--ink);text-shadow:none}
+.hud-sound{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.85);border:none;font-size:18px;cursor:pointer;z-index:11;
+  display:flex;align-items:center;justify-content:center}
+
+.game-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(31,64,104,.4);backdrop-filter:blur(6px);z-index:20;pointer-events:none}
+.game-overlay.hidden{display:none}
+.game-overlay-inner{text-align:center;color:var(--white);
+  animation:gameOverlayPulse 1.6s ease-in-out infinite}
+@keyframes gameOverlayPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(.97)}}
+.game-overlay-title{font-size:30px;font-weight:700;margin-bottom:4px;text-shadow:0 2px 8px rgba(0,0,0,.3)}
+.game-overlay-sub{font-size:14px;opacity:.95;text-shadow:0 1px 4px rgba(0,0,0,.3)}
+.combo-popup{position:absolute;color:var(--white);font-weight:700;font-size:24px;
+  text-shadow:2px 2px 0 var(--coral-deep),-2px -2px 0 var(--coral-deep),
+  2px -2px 0 var(--coral-deep),-2px 2px 0 var(--coral-deep);
+  pointer-events:none;z-index:15;animation:comboFloat 1s ease-out forwards}
+@keyframes comboFloat{0%{transform:translateY(0) scale(.5);opacity:0}
+  20%{transform:translateY(-8px) scale(1.2);opacity:1}
+  100%{transform:translateY(-50px) scale(.95);opacity:0}}
+
+/* MODAL / OVERLAY */
+.overlay{position:fixed;inset:0;background:rgba(31,64,104,.45);display:flex;align-items:center;
+  justify-content:center;z-index:100;padding:24px;backdrop-filter:blur(4px);overflow-y:auto}
+.overlay.hidden{display:none}
+.modal{background:var(--white);border-radius:var(--r);padding:28px 24px;width:100%;
+  max-width:360px;box-shadow:var(--shadow);max-height:calc(100vh - 48px);overflow-y:auto}
+.modal-title{font-size:26px;font-weight:700;text-align:center;margin-bottom:4px}
+.modal-sub{font-size:15px;color:var(--muted);text-align:center;margin-bottom:24px}
+
+.fgroup{margin-bottom:16px}
+.flabel{display:block;font-size:14px;font-weight:700;margin-bottom:6px}
+.finput,.fselect{width:100%;padding:12px 16px;border:2px solid var(--shallow);
+  border-radius:14px;font-family:inherit;font-size:16px;background:var(--bg-light);
+  color:var(--ink);outline:none;transition:border-color .15s}
+.finput:focus,.fselect:focus{border-color:var(--aqua-deep)}
+.fselect{appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%231F4068' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+  background-repeat:no-repeat;background-position:right 14px center;padding-right:40px}
+.fhint{font-size:12px;color:var(--muted);margin-top:4px}
+.ferror{font-size:13px;color:#E53E3E;margin-top:10px;display:none}
+.ferror.show{display:block}
+
+/* RESULT MODAL */
+.result-modal{background:var(--white);border-radius:24px;padding:30px 24px;width:100%;
+  max-width:360px;box-shadow:var(--shadow);text-align:center}
+.result-score-wrap{margin:8px 0 18px}
+.result-score-label{font-size:11px;letter-spacing:2px;color:var(--muted);font-weight:700}
+.result-score{font-size:64px;font-weight:700;color:var(--coral-deep);line-height:1}
+.result-best{font-size:14px;color:var(--muted);margin-top:2px}
+.result-stats{display:flex;justify-content:space-around;margin:18px 0;padding:14px 0;
+  border-top:1px solid var(--shallow);border-bottom:1px solid var(--shallow)}
+.rstat{text-align:center}
+.rstat-label{font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:700}
+.rstat-value{font-size:20px;font-weight:700;color:var(--ink);margin-top:2px}
+.result-actions{display:flex;gap:10px;margin-top:6px}
+.result-actions .btn{flex:1;font-size:15px;padding:12px}
+
+/* LEADERBOARD */
+#lb-screen{padding:20px;background:linear-gradient(180deg,#DEF5FA,#B8E5F0);overflow-y:auto}
+.lb-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.lb-back{background:none;border:none;font-size:24px;cursor:pointer;color:var(--ink);
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.lb-back:active{background:var(--shallow)}
+.lb-title{font-size:22px;font-weight:700}
+.lb-tabs{display:flex;gap:6px;margin-bottom:14px;background:var(--bg-light);padding:4px;
+  border-radius:12px}
+.lb-tab{flex:1;padding:8px 4px;border:none;background:transparent;font-family:inherit;
+  font-size:13px;font-weight:700;color:var(--muted);border-radius:8px;cursor:pointer}
+.lb-tab.active{background:var(--white);color:var(--ink);box-shadow:0 1px 4px rgba(31,64,104,.1)}
+#lb-list{flex:1;overflow-y:auto}
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--white);
+  border:2px solid var(--shallow);border-radius:14px;margin-bottom:8px}
+.lb-rank{font-size:18px;font-weight:700;color:var(--muted);width:36px;text-align:center}
+.lb-rank.gold{color:#F59E0B}.lb-rank.silver{color:#9CA3AF}.lb-rank.bronze{color:#B45309}
+.lb-callsign{flex:1;font-size:15px;font-weight:600}
+.lb-grade{font-size:11px;color:var(--muted);margin-left:6px;background:var(--bg-light);
+  padding:2px 6px;border-radius:8px;font-weight:700}
+.lb-score{font-size:18px;font-weight:700;color:var(--coral-deep)}
+.lb-empty{text-align:center;padding:40px;color:var(--muted);font-size:15px}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="screen active" id="loading-screen">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Diving in...</div>
+  </div>
+
+  <div class="screen" id="home-screen">
+    <div class="home-hero">
+      <svg class="home-mascot" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 240" aria-label="Seahorse mascot">
+        <defs>
+          <style>
+            .wp-bob{animation:wpBob 2.8s ease-in-out infinite;transform-origin:center}
+            @keyframes wpBob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-7px) rotate(2deg)}}
+            .wp-shell{fill:#FFB199}
+            .wp-shell-stroke{fill:none;stroke:#FF8B6F;stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}
+            .wp-belly{fill:#FFD9C9}
+            .wp-eye{fill:#1A2E4E}
+            .wp-spark{fill:#FFFFFF}
+            .wp-fin{fill:#FFE5C2}
+            .wp-coronet{fill:#FF8B6F}
+            .wp-blush{fill:#FF7BAC;opacity:.45}
+            .wp-ridge{fill:#FF8B6F;opacity:.4}
+          </style>
+        </defs>
+        <g class="wp-bob">
+          <!-- shadow -->
+          <ellipse cx="115" cy="228" rx="55" ry="5" fill="#1F4068" opacity=".15"/>
+          <!-- main body curve (vertical with bend) -->
+          <path class="wp-shell" d="M 100 60 C 70 70 60 105 70 140 C 75 175 90 195 115 200 C 145 200 155 175 150 145 C 145 120 140 95 145 75 C 140 55 120 50 100 60 Z"/>
+          <path class="wp-shell-stroke" d="M 100 60 C 70 70 60 105 70 140 C 75 175 90 195 115 200 C 145 200 155 175 150 145 C 145 120 140 95 145 75 C 140 55 120 50 100 60 Z"/>
+          <!-- belly highlight -->
+          <ellipse class="wp-belly" cx="103" cy="135" rx="20" ry="38"/>
+          <!-- ridge dots along belly -->
+          <circle class="wp-ridge" cx="100" cy="105" r="3.5"/>
+          <circle class="wp-ridge" cx="105" cy="135" r="3.5"/>
+          <circle class="wp-ridge" cx="115" cy="165" r="3.5"/>
+          <!-- head -->
+          <ellipse class="wp-shell" cx="100" cy="60" rx="36" ry="32"/>
+          <ellipse class="wp-shell-stroke" cx="100" cy="60" rx="36" ry="32"/>
+          <!-- snout (extending right) -->
+          <ellipse class="wp-shell" cx="138" cy="65" rx="22" ry="11"/>
+          <ellipse class="wp-shell-stroke" cx="138" cy="65" rx="22" ry="11"/>
+          <!-- mouth dot at tip of snout -->
+          <circle fill="#FF8B6F" cx="158" cy="65" r="2.5"/>
+          <!-- coronet (zigzag crown on top) -->
+          <path class="wp-coronet" d="M 78 32 L 86 22 L 92 30 L 100 18 L 108 30 L 116 20 L 122 32 Z"/>
+          <!-- eye -->
+          <circle class="wp-eye" cx="115" cy="56" r="6"/>
+          <circle class="wp-spark" cx="117" cy="54" r="2"/>
+          <!-- cheek blush -->
+          <ellipse class="wp-blush" cx="100" cy="72" rx="8" ry="4"/>
+          <!-- pectoral fin (back side) -->
+          <path class="wp-fin" d="M 152 95 Q 178 90 172 118 Q 155 113 150 100 Z" stroke="#FF8B6F" stroke-width="2.5" stroke-linejoin="round"/>
+          <!-- curled tail -->
+          <path class="wp-shell" d="M 115 200 Q 145 215 145 232 Q 130 246 115 238 Q 105 222 110 205 Z"/>
+          <path class="wp-shell-stroke" d="M 115 200 Q 145 215 145 232 Q 130 246 115 238 Q 105 222 110 205 Z"/>
+          <!-- tail spiral inner -->
+          <circle fill="#FFE5C2" cx="130" cy="225" r="4"/>
+        </g>
+      </svg>
+      <div class="home-text">
+        <div class="home-title">WATER POP</div>
+        <div class="home-tagline">Tap to dive a buoyant seahorse!</div>
+      </div>
+    </div>
+
+    <div class="player-card">
+      <div class="player-avatar" id="home-avatar">🐴</div>
+      <div>
+        <div class="player-callsign" id="home-callsign">—</div>
+        <div class="player-sub">Best: <strong id="home-best">0</strong></div>
+      </div>
+    </div>
+
+    <div class="daily-card" id="daily-card">
+      <div class="daily-card-glow"></div>
+      <div class="daily-card-content">
+        <div class="daily-card-top">
+          <div class="daily-card-label">🌟 Today's Challenge</div>
+          <div class="daily-card-streak" id="daily-streak">Build your streak!</div>
+        </div>
+        <div class="daily-card-body" id="daily-body">
+          Same reef for everyone today.<br>One shot · Pure skill 🏆
+        </div>
+        <button class="daily-card-btn" id="daily-btn">PLAY DAILY →</button>
+      </div>
+    </div>
+
+    <button class="btn btn-coral" id="play-btn">🌊 Free Play</button>
+    <button class="btn btn-aqua"  id="lb-btn">🏆 Leaderboard</button>
+    <button class="btn btn-ghost" id="howto-btn">❓ How to Play</button>
+  </div>
+
+  <div class="screen" id="game-screen">
+    <button class="hud-sound" id="sound-btn">🔊</button>
+    <div class="hud">
+      <div class="hud-card">
+        <div class="hud-label">SCORE</div>
+        <div class="hud-value" id="game-score">0</div>
+      </div>
+      <div class="hud-card hud-combo idle" id="combo-card">
+        <div class="hud-label">COMBO</div>
+        <div class="hud-value" id="game-combo">×1</div>
+      </div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+    <div class="game-overlay" id="game-overlay">
+      <div class="game-overlay-inner">
+        <div class="game-overlay-title">🐴 Tap to Dive!</div>
+        <div class="game-overlay-sub" id="game-overlay-sub">Avoid the corals · Pass to score</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="lb-screen">
+    <div class="lb-header">
+      <button class="lb-back" id="lb-back">←</button>
+      <div class="lb-title">🏆 Leaderboard</div>
+    </div>
+    <div class="lb-tabs">
+      <button class="lb-tab active" data-range="alltime">All-Time</button>
+      <button class="lb-tab" data-range="weekly">This Week</button>
+      <button class="lb-tab" data-range="daily">Today</button>
+    </div>
+    <div id="lb-list"><div class="lb-empty">Loading...</div></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="signup-modal">
+  <div class="modal">
+    <div class="modal-title">🐴 WATER POP</div>
+    <div class="modal-sub">Pick a callsign to start!</div>
+    <form id="signup-form" onsubmit="return false;">
+      <div class="fgroup">
+        <label class="flabel" for="cs-input">Callsign</label>
+        <input class="finput" id="cs-input" type="text" placeholder="e.g. SeahorseRider99" maxlength="20" autocomplete="off" autocapitalize="off">
+        <div class="fhint">Letters, numbers, _ (2–20 chars). Cannot be changed.</div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel" for="gr-input">Grade <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <select class="fselect" id="gr-input">
+          <option value="">Prefer not to say</option>
+          <option value="K">Kindergarten</option>
+          <option value="1">Grade 1</option><option value="2">Grade 2</option>
+          <option value="3">Grade 3</option><option value="4">Grade 4</option>
+          <option value="5">Grade 5</option><option value="6">Grade 6</option>
+          <option value="7">Grade 7</option><option value="8">Grade 8</option>
+          <option value="9">Grade 9</option><option value="10">Grade 10</option>
+          <option value="11">Grade 11</option><option value="12">Grade 12</option>
+          <option value="family">Family / Other</option>
+        </select>
+      </div>
+      <div class="ferror" id="su-err"></div>
+      <button class="btn btn-coral" id="su-btn" type="submit" style="margin-top:8px">Start →</button>
+    </form>
+  </div>
+</div>
+
+<div class="overlay hidden" id="result-modal">
+  <div class="result-modal">
+    <div class="result-score-wrap">
+      <div class="result-score-label">YOUR SCORE</div>
+      <div class="result-score" id="result-score">0</div>
+      <div class="result-best" id="result-best">Best: 0</div>
+    </div>
+    <div class="result-stats">
+      <div class="rstat">
+        <div class="rstat-label">MAX COMBO</div>
+        <div class="rstat-value" id="res-combo">0</div>
+      </div>
+      <div class="rstat">
+        <div class="rstat-label">CORALS</div>
+        <div class="rstat-value" id="res-corals">0</div>
+      </div>
+    </div>
+    <div class="result-actions">
+      <button class="btn btn-ghost" id="result-home">Home</button>
+      <button class="btn btn-coral" id="replay-btn">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ===== iOS gesture/zoom prevention =====
+document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
+document.addEventListener('gestureend', e => e.preventDefault(), { passive: false });
+let _lastTouchEnd = 0;
+document.addEventListener('touchend', e => {
+  if(e.target.closest('input, select, textarea, button, label, a')) return;
+  const now = Date.now();
+  if(now - _lastTouchEnd <= 350) e.preventDefault();
+  _lastTouchEnd = now;
+}, { passive: false });
+
+// ===== Supabase =====
+const SUPABASE_URL  = 'https://tlpzztuxttsobhqprosk.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRscHp6dHV4dHRzb2JocXByb3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2Mzg2NDQsImV4cCI6MjA5MzIxNDY0NH0.gMP2SO2NCnbWbknHMObs11Z8vWH3Wa6_3bAGobV9_GU';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+  realtime: { params: { eventsPerSecond: 1 } },
+});
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ===== Daily challenge: deterministic PRNG (Eastern Time) =====
+function dailyDateStr(){
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+function hashStr(s){
+  let h = 2166136261;
+  for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function mulberry32(seed){
+  let s = seed >>> 0;
+  return function(){
+    s |= 0; s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+let _rng = Math.random;
+const rnd = () => _rng();
+function setDailyRng(){
+  const seed = hashStr('waterpop-' + dailyDateStr());
+  _rng = mulberry32(seed);
+}
+function setFreeRng(){ _rng = Math.random; }
+function yesterdayET(){
+  const today = dailyDateStr();
+  const d = new Date(today + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0,10);
+}
+
+// ===== Sounds =====
+let toneReady = false, soundOn = true;
+let synthMain, synthFX;
+async function initSound(){
+  if(toneReady) return;
+  await Tone.start();
+  synthMain = new Tone.Synth({
+    oscillator:{type:'triangle'}, envelope:{attack:0.01,decay:0.15,sustain:0.05,release:0.2}
+  }).toDestination();
+  synthMain.volume.value = -8;
+  synthFX = new Tone.PolySynth(Tone.Synth, {
+    oscillator:{type:'sine'}, envelope:{attack:0.01,decay:0.2,sustain:0.05,release:0.3}
+  }).toDestination();
+  synthFX.volume.value = -10;
+  toneReady = true;
+}
+const SFX = {
+  dive(){ if(!soundOn||!toneReady) return; synthMain.triggerAttackRelease('A4','16n'); },
+  pass(combo){ if(!soundOn||!toneReady) return;
+    const notes = ['C5','E5','G5','C6','E6','G6'];
+    const note = notes[Math.min(combo,5)];
+    synthFX.triggerAttackRelease(note,'8n');
+  },
+  combo(){ if(!soundOn||!toneReady) return;
+    ['C5','E5','G5','C6'].forEach((n,i)=>synthFX.triggerAttackRelease(n,'16n', Tone.now()+i*.05));
+  },
+  hit(){ if(!soundOn||!toneReady) return;
+    synthMain.triggerAttackRelease('C3','4n');
+    synthFX.triggerAttackRelease('G2','4n', Tone.now()+.05);
+  },
+  end(){ if(!soundOn||!toneReady) return;
+    ['G4','E4','C4','A3'].forEach((n,i)=>synthMain.triggerAttackRelease(n,'8n', Tone.now()+i*.12));
+  },
+};
+
+// ===== LocalStorage =====
+const LSKEY = 'waterpop_player';
+const save = p => { try{ localStorage.setItem(LSKEY, JSON.stringify(p)); } catch{} };
+const load = () => { try{ return JSON.parse(localStorage.getItem(LSKEY) || 'null'); } catch{ return null; } };
+
+// ===== Player CRUD =====
+async function fetchPlayer(callsign){
+  const {data} = await db.from('waterpop_players').select('*').eq('callsign', callsign).single();
+  return data;
+}
+async function createPlayer(callsign, grade){
+  const {data,error} = await db.from('waterpop_players')
+    .insert({callsign, grade:grade||null}).select().single();
+  if(error) throw error;
+  return data;
+}
+async function patchPlayer(id, patch){
+  await db.from('waterpop_players').update(patch).eq('id', id);
+}
+async function insertSession(s){
+  await db.from('waterpop_sessions').insert(s);
+}
+function ensurePlayerDefaults(p){
+  if(p){
+    p.current_streak = p.current_streak || 0;
+    p.best_streak = p.best_streak || 0;
+    p.best_combo = p.best_combo || 0;
+    p.last_daily_date = p.last_daily_date || null;
+    p.last_daily_score = p.last_daily_score || 0;
+  }
+  return p;
+}
+
+// ===== Validation =====
+const validCallsign = s => /^[A-Za-z0-9_]{2,20}$/.test(s);
+
+// ===== Navigation =====
+function show(screenId){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+}
+
+// ===== Signup =====
+function showSignup(){ document.getElementById('signup-modal').classList.remove('hidden'); }
+function hideSignup(){ document.getElementById('signup-modal').classList.add('hidden'); }
+
+document.getElementById('gr-input').addEventListener('change', e => e.target.blur());
+
+let player = null;
+async function handleSignup(){
+  const btn = document.getElementById('su-btn');
+  const err = document.getElementById('su-err');
+  const cs = document.getElementById('cs-input').value.trim();
+  const gr = document.getElementById('gr-input').value;
+  err.classList.remove('show');
+  if(!validCallsign(cs)){
+    err.textContent = 'Callsign: letters, numbers, _ (2–20 chars)';
+    err.classList.add('show'); return;
+  }
+  btn.disabled = true; btn.textContent = 'Signing up...';
+  try{
+    player = await createPlayer(cs, gr);
+    ensurePlayerDefaults(player);
+    save(player); hideSignup(); renderHome();
+  } catch(e){
+    console.error('signup',e);
+    if(e?.code === '23505') err.textContent = 'This callsign is taken';
+    else if(e?.message?.includes('JWT')) err.textContent = 'Invalid anon key configuration';
+    else err.textContent = `Error: ${e?.message || JSON.stringify(e)}`;
+    err.classList.add('show');
+  } finally { btn.disabled = false; btn.textContent = 'Start →'; }
+}
+document.getElementById('signup-form').addEventListener('submit', e => { e.preventDefault(); handleSignup(); });
+document.getElementById('su-btn').addEventListener('click', e => { e.preventDefault(); handleSignup(); });
+
+// ===== Home =====
+function renderHome(){
+  document.getElementById('home-callsign').textContent = player.callsign;
+  document.getElementById('home-best').textContent = player.best_score.toLocaleString();
+  renderDailyCard();
+  show('home-screen');
+}
+function renderDailyCard(){
+  const today = dailyDateStr();
+  const streak = player.current_streak || 0;
+  const card = document.getElementById('daily-card');
+  const btn = document.getElementById('daily-btn');
+  const body = document.getElementById('daily-body');
+  const streakEl = document.getElementById('daily-streak');
+  const playedToday = player.last_daily_date === today;
+  streakEl.textContent = streak > 0 ? `🔥 ${streak} day streak` : 'Build your streak!';
+  if(playedToday){
+    card.classList.add('done'); btn.disabled = true;
+    btn.textContent = '✓ COME BACK TOMORROW';
+    body.innerHTML = `Today's score: <strong>${(player.last_daily_score||0).toLocaleString()}</strong><br>New reef at midnight ET.`;
+  } else {
+    card.classList.remove('done'); btn.disabled = false;
+    btn.textContent = 'PLAY DAILY →';
+    body.innerHTML = `Same reef for everyone today.<br>One shot · Pure skill 🏆`;
+  }
+}
+
+document.getElementById('play-btn').addEventListener('click', async () => {
+  await initSound(); show('game-screen'); startGame('free');
+});
+document.getElementById('daily-btn').addEventListener('click', async () => {
+  if(player.last_daily_date === dailyDateStr()) return;
+  await initSound(); show('game-screen'); startGame('daily');
+});
+document.getElementById('lb-btn').addEventListener('click', () => { show('lb-screen'); loadLeaderboard(); });
+document.getElementById('lb-back').addEventListener('click', () => { show('home-screen'); renderHome(); });
+document.getElementById('howto-btn').addEventListener('click', () => alert('How to Play\n\nThe seahorse rises naturally with buoyancy.\nTap to dive down.\nNavigate through coral gaps to score.\nPass 3 in a row → ×2 combo.\nPass 6 in a row → ×3 combo.\n\nDaily Challenge: same reef for everyone, one shot per day. Build your streak!'));
+
+// ===== GAME =====
+const G = {
+  active: false,
+  started: false,
+  mode: 'free',
+  canvas: null, ctx: null,
+  W: 0, H: 0,
+  player: { x: 0, y: 0, vy: 0, r: 18, rotation: 0 },
+  obstacles: [],
+  score: 0, combo: 0, maxCombo: 0, corals: 0,
+  scrollSpeed: 1.8,
+  spawnX: 0,
+  bubbles: [],
+  startTime: 0,
+  frameId: null,
+};
+
+const PHYSICS = {
+  BUOYANCY: -0.10,
+  GRAVITY: 0.04,
+  DIVE_IMPULSE: 4.5,
+  MAX_VY: 7,
+  MIN_VY: -3,
+};
+const OBSTACLE = {
+  WIDTH: 70,
+  GAP: 170,
+  SPACING: 230,
+  MIN_GAP_Y: 90,
+};
+
+function setupCanvas(){
+  const canvas = document.getElementById('game-canvas');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = document.getElementById('game-screen').getBoundingClientRect();
+  G.W = rect.width;
+  G.H = rect.height;
+  canvas.width = G.W * dpr;
+  canvas.height = G.H * dpr;
+  canvas.style.width = G.W + 'px';
+  canvas.style.height = G.H + 'px';
+  G.canvas = canvas;
+  G.ctx = canvas.getContext('2d');
+  G.ctx.scale(dpr, dpr);
+}
+
+function startGame(mode){
+  G.mode = mode;
+  if(mode === 'daily') setDailyRng(); else setFreeRng();
+  setupCanvas();
+  G.player.x = G.W * 0.28;
+  G.player.y = G.H * 0.5;
+  G.player.vy = -1;
+  G.player.rotation = 0;
+  G.obstacles = [];
+  G.bubbles = [];
+  G.score = 0; G.combo = 0; G.maxCombo = 0; G.corals = 0;
+  G.scrollSpeed = 1.8;
+  G.spawnX = G.W + 100;
+  G.active = true;
+  G.started = false;
+  G.startTime = 0;
+  document.getElementById('game-score').textContent = '0';
+  document.getElementById('game-combo').textContent = '×1';
+  document.getElementById('combo-card').classList.add('idle');
+  document.getElementById('game-overlay').classList.remove('hidden');
+  document.getElementById('game-overlay-sub').textContent =
+    mode === 'daily' ? 'Daily Challenge · Same reef for all' : 'Avoid the corals · Pass to score';
+  // Start animation loop
+  if(G.frameId) cancelAnimationFrame(G.frameId);
+  G.frameId = requestAnimationFrame(gameLoop);
+}
+
+function dive(){
+  if(!G.active) return;
+  if(!G.started){
+    G.started = true;
+    G.startTime = performance.now();
+    document.getElementById('game-overlay').classList.add('hidden');
+  }
+  G.player.vy = PHYSICS.DIVE_IMPULSE;
+  SFX.dive();
+  // bubble effect
+  for(let i=0;i<5;i++){
+    G.bubbles.push({
+      x: G.player.x - 8 - Math.random()*8,
+      y: G.player.y + Math.random()*8 - 4,
+      r: 2 + Math.random()*3,
+      vx: -1.5 - Math.random()*1.5,
+      vy: -0.3 + Math.random()*0.6,
+      life: 1.0,
+    });
+  }
+}
+
+document.getElementById('game-canvas').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  dive();
+});
+
+function spawnObstacle(){
+  const minY = OBSTACLE.MIN_GAP_Y;
+  const maxY = G.H - OBSTACLE.GAP - OBSTACLE.MIN_GAP_Y;
+  const gapY = minY + Math.floor(rnd() * (maxY - minY));
+  G.obstacles.push({
+    x: G.spawnX,
+    gapY,
+    gap: OBSTACLE.GAP,
+    width: OBSTACLE.WIDTH,
+    passed: false,
+  });
+  G.spawnX += OBSTACLE.SPACING;
+}
+
+function gameOver(){
+  G.active = false;
+  SFX.hit();
+  cancelAnimationFrame(G.frameId);
+  setTimeout(() => endGame(), 600);
+}
+
+function update(){
+  if(!G.started) return;
+
+  // Player physics
+  G.player.vy += PHYSICS.BUOYANCY + PHYSICS.GRAVITY;
+  G.player.vy = Math.max(PHYSICS.MIN_VY, Math.min(PHYSICS.MAX_VY, G.player.vy));
+  G.player.y += G.player.vy;
+  G.player.rotation = Math.max(-0.3, Math.min(0.6, G.player.vy * 0.08));
+
+  // Walls
+  if(G.player.y < G.player.r){ G.player.y = G.player.r; G.player.vy = 1; }
+  if(G.player.y > G.H - G.player.r){
+    G.player.y = G.H - G.player.r;
+    gameOver();
+    return;
+  }
+
+  // Spawn obstacles
+  while(G.spawnX < G.W + OBSTACLE.SPACING * 2) spawnObstacle();
+
+  // Move obstacles
+  for(const ob of G.obstacles){
+    ob.x -= G.scrollSpeed;
+    // Score when passed
+    if(!ob.passed && ob.x + ob.width < G.player.x){
+      ob.passed = true;
+      G.corals++;
+      G.combo++;
+      G.maxCombo = Math.max(G.maxCombo, G.combo);
+      const mult = G.combo >= 6 ? 3 : G.combo >= 3 ? 2 : 1;
+      G.score += mult;
+      SFX.pass(G.combo);
+      document.getElementById('game-score').textContent = G.score;
+      document.getElementById('game-combo').textContent = '×' + mult;
+      const comboCard = document.getElementById('combo-card');
+      if(mult > 1) comboCard.classList.remove('idle');
+      else comboCard.classList.add('idle');
+      // popup at player position
+      if(G.combo === 3 || G.combo === 6 || G.combo === 10){
+        spawnComboPopup(`COMBO ×${mult}!`);
+        SFX.combo();
+      } else if(mult > 1){
+        spawnComboPopup(`+${mult}`);
+      }
+    }
+    // Collision
+    if(ob.x < G.player.x + G.player.r && ob.x + ob.width > G.player.x - G.player.r){
+      if(G.player.y - G.player.r < ob.gapY || G.player.y + G.player.r > ob.gapY + ob.gap){
+        gameOver();
+        return;
+      }
+    }
+  }
+
+  // Remove off-screen
+  G.obstacles = G.obstacles.filter(o => o.x > -OBSTACLE.WIDTH);
+
+  // Update bubbles
+  for(const b of G.bubbles){
+    b.x += b.vx;
+    b.y += b.vy;
+    b.vy -= 0.03;
+    b.life -= 0.02;
+  }
+  G.bubbles = G.bubbles.filter(b => b.life > 0);
+
+  // Speed up over time
+  if(G.score > 0 && G.score % 15 === 0){
+    G.scrollSpeed = Math.min(3.5, 1.8 + G.score * 0.015);
+  }
+}
+
+function spawnComboPopup(text){
+  const el = document.createElement('div');
+  el.className = 'combo-popup';
+  el.textContent = text;
+  el.style.left = (G.player.x + 30) + 'px';
+  el.style.top = (G.player.y - 20) + 'px';
+  document.getElementById('game-screen').appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+function render(){
+  const ctx = G.ctx;
+  // Background gradient (depth-based — gets darker as score increases)
+  const depth = Math.min(1, G.score / 50);
+  const bgTop = `rgb(${Math.floor(93 - depth*60)}, ${Math.floor(212 - depth*100)}, ${Math.floor(224 - depth*100)})`;
+  const bgBot = `rgb(${Math.floor(31 - depth*15)}, ${Math.floor(64 - depth*30)}, ${Math.floor(104 - depth*30)})`;
+  const grad = ctx.createLinearGradient(0, 0, 0, G.H);
+  grad.addColorStop(0, bgTop);
+  grad.addColorStop(1, bgBot);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, G.W, G.H);
+
+  // Light rays from top
+  ctx.save();
+  ctx.globalAlpha = 0.08;
+  for(let i=0;i<3;i++){
+    const x = G.W * (0.2 + i*0.3);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x - 40, G.H);
+    ctx.lineTo(x + 40, G.H);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Obstacles (coral pillars)
+  for(const ob of G.obstacles) drawCoral(ob);
+
+  // Bubbles
+  for(const b of G.bubbles){
+    ctx.save();
+    ctx.globalAlpha = b.life * 0.7;
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Player (seahorse)
+  drawSeahorse(G.player.x, G.player.y, G.player.rotation);
+}
+
+function drawCoral(ob){
+  const ctx = G.ctx;
+  const x = ob.x, w = ob.width;
+  const topH = ob.gapY;
+  const botY = ob.gapY + ob.gap;
+  const botH = G.H - botY;
+
+  // Top coral pillar
+  drawCoralPillar(x, 0, w, topH, false);
+  // Bottom coral pillar
+  drawCoralPillar(x, botY, w, botH, true);
+}
+
+function drawCoralPillar(x, y, w, h, pointUp){
+  const ctx = G.ctx;
+  // Main pillar
+  const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+  grad.addColorStop(0, '#FF8B6F');
+  grad.addColorStop(0.5, '#FFB199');
+  grad.addColorStop(1, '#FF8B6F');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.roundRect(x + 4, y, w - 8, h, 8);
+  ctx.fill();
+  // Outline
+  ctx.strokeStyle = '#C2614A';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Cap (decorative top/bottom of pillar)
+  const capY = pointUp ? y : y + h - 14;
+  ctx.fillStyle = '#FF6B5C';
+  ctx.beginPath();
+  ctx.roundRect(x, capY, w, 14, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  // Coral bumps (texture)
+  ctx.fillStyle = 'rgba(255,255,255,.18)';
+  for(let i = 0; i < Math.floor(h / 30); i++){
+    const by = pointUp ? y + 20 + i*30 : y + h - 20 - i*30;
+    ctx.beginPath();
+    ctx.arc(x + w - 12, by, 4, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+function drawSeahorse(cx, cy, rot){
+  const ctx = G.ctx;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.scale(0.4, 0.4);
+  // Recreate the seahorse from SVG, simplified
+  // Body
+  ctx.fillStyle = '#FFB199';
+  ctx.strokeStyle = '#FF8B6F';
+  ctx.lineWidth = 3.5;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-15, -50);
+  ctx.bezierCurveTo(-45, -40, -55, -5, -45, 30);
+  ctx.bezierCurveTo(-40, 65, -25, 85, 0, 90);
+  ctx.bezierCurveTo(30, 90, 40, 65, 35, 35);
+  ctx.bezierCurveTo(30, 10, 25, -15, 30, -35);
+  ctx.bezierCurveTo(25, -55, 5, -60, -15, -50);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Head
+  ctx.beginPath();
+  ctx.ellipse(-15, -50, 36, 32, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+  // Snout
+  ctx.beginPath();
+  ctx.ellipse(23, -45, 22, 11, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+  // Coronet
+  ctx.fillStyle = '#FF8B6F';
+  ctx.beginPath();
+  ctx.moveTo(-37, -78); ctx.lineTo(-29, -88); ctx.lineTo(-23, -80);
+  ctx.lineTo(-15, -92); ctx.lineTo(-7, -80); ctx.lineTo(1, -90);
+  ctx.lineTo(7, -78); ctx.closePath();
+  ctx.fill();
+  // Eye
+  ctx.fillStyle = '#1A2E4E';
+  ctx.beginPath();
+  ctx.arc(0, -54, 6, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.arc(2, -56, 2, 0, Math.PI*2);
+  ctx.fill();
+  // Mouth dot at snout tip
+  ctx.fillStyle = '#FF8B6F';
+  ctx.beginPath();
+  ctx.arc(43, -45, 2.5, 0, Math.PI*2);
+  ctx.fill();
+  // Pectoral fin
+  ctx.fillStyle = '#FFE5C2';
+  ctx.strokeStyle = '#FF8B6F';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(37, -15);
+  ctx.quadraticCurveTo(63, -20, 57, 8);
+  ctx.quadraticCurveTo(40, 3, 35, -10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Curled tail
+  ctx.fillStyle = '#FFB199';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(0, 90);
+  ctx.quadraticCurveTo(30, 105, 30, 122);
+  ctx.quadraticCurveTo(15, 136, 0, 128);
+  ctx.quadraticCurveTo(-10, 112, -5, 95);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#FFE5C2';
+  ctx.beginPath();
+  ctx.arc(15, 115, 4, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function gameLoop(){
+  if(!G.active) return;
+  update();
+  render();
+  G.frameId = requestAnimationFrame(gameLoop);
+}
+
+async function endGame(){
+  G.active = false;
+  SFX.end();
+
+  const today = dailyDateStr();
+  const sess = {
+    player_id: player.id,
+    score: G.score,
+    max_combo: G.maxCombo,
+    duration_sec: Math.floor((performance.now() - G.startTime) / 1000),
+    mode: G.mode,
+    daily_date: G.mode === 'daily' ? today : null,
+  };
+  const newBest = G.score > player.best_score;
+  await insertSession(sess);
+  player.total_score = (player.total_score||0) + G.score;
+  player.games_played = (player.games_played||0) + 1;
+  if(newBest) player.best_score = G.score;
+  if(G.maxCombo > (player.best_combo||0)) player.best_combo = G.maxCombo;
+
+  let streakUpdated = false;
+  let streakValue = player.current_streak || 0;
+  if(G.mode === 'daily' && player.last_daily_date !== today){
+    streakValue = (player.last_daily_date === yesterdayET()) ? streakValue + 1 : 1;
+    player.current_streak = streakValue;
+    player.best_streak = Math.max(player.best_streak||0, streakValue);
+    player.last_daily_date = today;
+    player.last_daily_score = G.score;
+    streakUpdated = true;
+  }
+  save(player);
+  const patch = {
+    best_score: player.best_score, total_score: player.total_score,
+    games_played: player.games_played, best_combo: player.best_combo,
+    last_played_at: new Date().toISOString(),
+  };
+  if(streakUpdated){
+    patch.current_streak = player.current_streak;
+    patch.best_streak = player.best_streak;
+    patch.last_daily_date = player.last_daily_date;
+    patch.last_daily_score = player.last_daily_score;
+  }
+  await patchPlayer(player.id, patch);
+
+  document.getElementById('result-score').textContent = G.score.toLocaleString();
+  let bestLine = newBest ? '🎉 New high score!' : `Best: ${player.best_score.toLocaleString()}`;
+  if(G.mode === 'daily') bestLine = `Daily ${today} · 🔥 ${streakValue} day streak`;
+  document.getElementById('result-best').textContent = bestLine;
+  document.getElementById('res-combo').textContent = G.maxCombo;
+  document.getElementById('res-corals').textContent = G.corals;
+  document.getElementById('replay-btn').style.display = G.mode === 'daily' ? 'none' : '';
+  document.getElementById('result-modal').classList.remove('hidden');
+}
+
+document.getElementById('replay-btn').addEventListener('click', async () => {
+  document.getElementById('result-modal').classList.add('hidden');
+  startGame('free');
+});
+document.getElementById('result-home').addEventListener('click', () => {
+  document.getElementById('result-modal').classList.add('hidden');
+  show('home-screen'); renderHome();
+});
+
+// Sound toggle
+document.getElementById('sound-btn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  document.getElementById('sound-btn').textContent = soundOn ? '🔊' : '🔇';
+});
+
+// ===== Leaderboard =====
+let lbRange = 'alltime';
+document.querySelectorAll('.lb-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.lb-tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    lbRange = t.dataset.range;
+    loadLeaderboard();
+  });
+});
+
+async function loadLeaderboard(){
+  const listEl = document.getElementById('lb-list');
+  listEl.innerHTML = '<div class="lb-empty">Loading...</div>';
+  let rows = null;
+  if(lbRange === 'alltime'){
+    const {data,error} = await db.from('waterpop_players')
+      .select('callsign,best_score,grade,current_streak')
+      .order('best_score',{ascending:false}).limit(100);
+    if(error){ listEl.innerHTML = '<div class="lb-empty">Failed to load</div>'; return; }
+    rows = (data||[]).map(p => ({callsign:p.callsign, score:p.best_score, grade:p.grade, streak:p.current_streak}));
+  } else {
+    const today = dailyDateStr();
+    let fromDate = today;
+    if(lbRange === 'weekly'){
+      const d = new Date(today + 'T12:00:00Z');
+      d.setUTCDate(d.getUTCDate() - 6);
+      fromDate = d.toISOString().slice(0,10);
+    }
+    const {data,error} = await db.from('waterpop_sessions')
+      .select('score, daily_date, players:player_id(callsign,grade,current_streak)')
+      .eq('mode','daily').gte('daily_date', fromDate).lte('daily_date', today)
+      .order('score',{ascending:false}).limit(100);
+    if(error){ listEl.innerHTML = '<div class="lb-empty">Failed to load</div>'; return; }
+    rows = (data||[]).map(s => ({callsign:s.players?.callsign||'?', score:s.score,
+      grade:s.players?.grade, streak:s.players?.current_streak}));
+  }
+  if(!rows || rows.length === 0){
+    const msg = lbRange === 'daily' ? "No daily plays yet today. Be first! 🐴"
+              : lbRange === 'weekly' ? "No daily plays this week 🐴"
+              : "No players yet 🐴";
+    listEl.innerHTML = `<div class="lb-empty">${msg}</div>`;
+    return;
+  }
+  const rankCls = i => i===0?'gold':i===1?'silver':i===2?'bronze':'';
+  const rankIco = i => i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+  listEl.innerHTML = rows.map((p,i) => {
+    const grade = p.grade ? `<span class="lb-grade">${p.grade}</span>` : '';
+    const streak = (p.streak && p.streak >= 3) ? `<span class="lb-grade">🔥${p.streak}</span>` : '';
+    const self = player && p.callsign === player.callsign
+      ? 'background:#FFE5C2;border-color:#FFB199;' : '';
+    return `<div class="lb-row" style="${self}">
+      <div class="lb-rank ${rankCls(i)}">${rankIco(i)}</div>
+      <div class="lb-callsign">${p.callsign} ${grade}${streak}</div>
+      <div class="lb-score">${p.score.toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+
+// ===== Init =====
+async function init(){
+  const cached = load();
+  if(cached){
+    try{
+      const fresh = await fetchPlayer(cached.callsign);
+      if(fresh){ player = ensurePlayerDefaults(fresh); save(player); renderHome(); return; }
+    } catch(e){ console.error('init',e); }
+  }
+  showSignup();
+}
+init();
+</script>
+</body>
+</html>
