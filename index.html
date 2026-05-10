@@ -1411,20 +1411,20 @@ function buildShareText(){
     const today = dailyDateStr();
     const streak = player.current_streak || 0;
     const streakLine = streak > 1 ? ` · 🔥 ${streak}-day streak` : '';
-    return `🌊 WATER POP Daily ${today} — ${G.score} pts\n`
-         + `${charLabel} · max combo ×${G.maxCombo}${streakLine} · 💎 ${gems}\n`
-         + `Same reef for everyone today 👇\n${url}`;
+    return `🌊 WATER POP Daily ${today} — I scored ${G.score} points!\n`
+         + `${charLabel} · max combo ×${G.maxCombo}${streakLine} · 💎 ${gems} pearls\n\n`
+         + `Same reef for everyone today — give it a shot:\n${url}`;
   }
-  return `🌊 WATER POP — ${G.score} pts!\n`
-       + `${charLabel} · max combo ×${G.maxCombo} · 💎 ${gems}\n`
-       + `Beat me 👉 ${url}`;
+  return `🌊 I just scored ${G.score} points on WATER POP!\n`
+       + `${charLabel} · max combo ×${G.maxCombo} · 💎 ${gems} pearls\n\n`
+       + `Can you beat me?\n${url}`;
 }
 async function shareScore(){
   const text = buildShareText();
-  const url = window.location.origin + window.location.pathname;
-  const shareData = { title: 'WATER POP', text, url };
-  // Web Share API — opens native share sheet on iOS, Android, modern Chrome desktop.
-  // Korean-American users with KakaoTalk installed see it in the share sheet.
+  // Pass `text` only — including a separate `url` field makes iOS Messages drop
+  // the text body and send the URL alone. Embedding the URL inside `text` keeps
+  // the full score message intact across SMS / KakaoTalk / Mail / Twitter / etc.
+  const shareData = { title: 'WATER POP', text };
   if(navigator.share){
     try {
       await navigator.share(shareData);
