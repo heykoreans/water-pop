@@ -406,7 +406,7 @@ document.addEventListener('touchend', e => {
 
 // ===== Supabase =====
 const SUPABASE_URL  = 'https://tlpzztuxttsobhqprosk.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRscHp6dHV4dHRzb2JocXByb3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2Mzg2NDQsImV4cCI6MjA5MzIxNDY0NH0.gMP2SO2NCnbWbknHMObs11Z8vWH3Wa6_3bAGobV9_GU';
+const SUPABASE_ANON = 'YOUR_ANON_KEY_HERE';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
     persistSession: false,
@@ -608,7 +608,6 @@ const G = {
   obstacles: [],
   score: 0, combo: 0, maxCombo: 0, corals: 0,
   scrollSpeed: 1.8,
-  spawnX: 0,
   bubbles: [],
   startTime: 0,
   frameId: null,
@@ -655,7 +654,6 @@ function startGame(mode){
   G.bubbles = [];
   G.score = 0; G.combo = 0; G.maxCombo = 0; G.corals = 0;
   G.scrollSpeed = 1.8;
-  G.spawnX = G.W + 100;
   G.active = true;
   G.started = false;
   G.startTime = 0;
@@ -697,18 +695,17 @@ document.getElementById('game-canvas').addEventListener('pointerdown', e => {
   dive();
 });
 
-function spawnObstacle(){
+function spawnObstacle(x){
   const minY = OBSTACLE.MIN_GAP_Y;
   const maxY = G.H - OBSTACLE.GAP - OBSTACLE.MIN_GAP_Y;
   const gapY = minY + Math.floor(rnd() * (maxY - minY));
   G.obstacles.push({
-    x: G.spawnX,
+    x,
     gapY,
     gap: OBSTACLE.GAP,
     width: OBSTACLE.WIDTH,
     passed: false,
   });
-  G.spawnX += OBSTACLE.SPACING;
 }
 
 function gameOver(){
@@ -735,8 +732,14 @@ function update(){
     return;
   }
 
-  // Spawn obstacles
-  while(G.spawnX < G.W + OBSTACLE.SPACING * 2) spawnObstacle();
+  // 가장 오른쪽 장애물 위치 기준으로 필요한 만큼 계속 스폰
+  let rightmostX = G.obstacles.length > 0
+    ? Math.max(...G.obstacles.map(o => o.x))
+    : G.W;
+  while(rightmostX < G.W + OBSTACLE.SPACING * 2){
+    rightmostX += OBSTACLE.SPACING;
+    spawnObstacle(rightmostX);
+  }
 
   // Move obstacles
   for(const ob of G.obstacles){
