@@ -180,11 +180,30 @@ body{font-family:'Quicksand',-apple-system,BlinkMacSystemFont,system-ui,sans-ser
 .result-best{font-size:14px;color:var(--muted);margin-top:2px}
 .result-stats{display:flex;justify-content:space-around;margin:18px 0;padding:14px 0;
   border-top:1px solid var(--shallow);border-bottom:1px solid var(--shallow)}
-.rstat{text-align:center}
+.rstat{text-align:center;flex:1}
 .rstat-label{font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:700}
 .rstat-value{font-size:20px;font-weight:700;color:var(--ink);margin-top:2px}
+.result-share{display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:13px;margin-bottom:10px;
+  background:linear-gradient(135deg,#5DD4E0,#2EA39E);color:#fff;
+  font-size:15px;font-weight:700;border:none;border-radius:14px;cursor:pointer;
+  font-family:inherit;transition:transform .12s,opacity .12s;
+  box-shadow:0 4px 12px rgba(46,163,158,.25)}
+.result-share:active{transform:scale(.98)}
+.result-share:disabled{opacity:.6;cursor:default}
 .result-actions{display:flex;gap:10px;margin-top:6px}
 .result-actions .btn{flex:1;font-size:15px;padding:12px}
+
+/* Toast for copy-to-clipboard fallback + general notifications */
+.toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);
+  background:var(--ink);color:#fff;padding:12px 22px;border-radius:24px;
+  font-size:14px;font-weight:600;z-index:10000;
+  box-shadow:0 8px 28px rgba(0,0,0,.3);
+  animation:toastIn .3s ease-out;
+  max-width:90vw;text-align:center}
+.toast.out{animation:toastOut .3s ease-in forwards}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes toastOut{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,20px)}}
 
 /* LEADERBOARD */
 #lb-screen{padding:20px;background:linear-gradient(180deg,#DEF5FA,#B8E5F0);overflow-y:auto}
@@ -265,6 +284,7 @@ body{font-family:'Quicksand',-apple-system,BlinkMacSystemFont,system-ui,sans-ser
 .char-img-inline{height:1.2em;width:auto;vertical-align:-0.3em;display:inline-block;margin-right:4px;
   transform:scaleX(-1);
   -webkit-user-drag:none;user-select:none;pointer-events:none}
+.char-emoji{display:inline-block;transform:scaleX(-1)}
 .modal-title-mascot{height:34px;width:auto;vertical-align:-10px;display:inline-block;margin-right:6px;
   transform:scaleX(-1);
   filter:drop-shadow(0 2px 4px rgba(31,64,104,.15));-webkit-user-drag:none;pointer-events:none}
@@ -428,7 +448,14 @@ body{font-family:'Quicksand',-apple-system,BlinkMacSystemFont,system-ui,sans-ser
         <div class="rstat-label">CORALS</div>
         <div class="rstat-value" id="res-corals">0</div>
       </div>
+      <div class="rstat">
+        <div class="rstat-label">PEARLS</div>
+        <div class="rstat-value" id="res-gems">0</div>
+      </div>
     </div>
+    <button class="result-share" id="share-btn" type="button">
+      <span>📤</span><span>Share Score</span>
+    </button>
     <div class="result-actions">
       <button class="btn btn-ghost" id="result-home">Home</button>
       <button class="btn btn-coral" id="replay-btn">Play Again</button>
@@ -496,12 +523,12 @@ function getSeahorseDrawable(){
 // HTML helper — returns HTML string for the character icon
 function charIconHTML(c){
   if(c.type === 'image') return `<img src="${c.src}" alt="${c.name}" class="char-img">`;
-  return c.ico; // emoji
+  return `<span class="char-emoji">${c.ico}</span>`; // emoji
 }
 // Inline variant for use within title text
 function charIconInlineHTML(c){
   if(c.type === 'image') return `<img src="${c.src}" alt="" class="char-img-inline">`;
-  return c.ico + ' ';
+  return `<span class="char-emoji">${c.ico}</span> `;
 }
 
 const LSCHAR = 'waterpop_character';
@@ -548,7 +575,7 @@ function yesterdayET(){
 
 // ===== Sounds =====
 let toneReady = false, soundOn = true;
-let synthMain, synthFX;
+let synthMain, synthFX, tromboneSynth;
 async function initSound(){
   if(toneReady) return;
   await Tone.start();
@@ -560,6 +587,16 @@ async function initSound(){
     oscillator:{type:'sine'}, envelope:{attack:0.01,decay:0.2,sustain:0.05,release:0.3}
   }).toDestination();
   synthFX.volume.value = -10;
+  // Trombone synth for the death sound — sawtooth + lowpass + portamento.
+  // Portamento makes setNote() smoothly slide pitch instead of jumping = "wah-wah" effect.
+  tromboneSynth = new Tone.MonoSynth({
+    oscillator: { type: 'sawtooth' },
+    envelope:    { attack: 0.03, decay: 0.18, sustain: 0.75, release: 0.55 },
+    filter:      { type: 'lowpass', frequency: 1500, Q: 1.8 },
+    filterEnvelope: { attack: 0.02, decay: 0.4, sustain: 0.5, release: 0.8, baseFrequency: 220, octaves: 2.5 },
+    portamento:  0.12
+  }).toDestination();
+  tromboneSynth.volume.value = -3;
   toneReady = true;
 }
 const SFX = {
@@ -573,33 +610,23 @@ const SFX = {
     ['C5','E5','G5','C6'].forEach((n,i)=>synthFX.triggerAttackRelease(n,'16n', Tone.now()+i*.05));
   },
   pearl(){ if(!soundOn||!toneReady) return;
-    // Bright bell-like chime — quick triplet
+    // Triumphant arpeggio — collect chime with sustain on top
     const t = Tone.now();
-    synthFX.triggerAttackRelease('E6','16n', t);
-    synthFX.triggerAttackRelease('G6','16n', t + 0.04);
-    synthFX.triggerAttackRelease('C7','16n', t + 0.08);
+    synthFX.triggerAttackRelease('C6','16n', t);
+    synthFX.triggerAttackRelease('E6','16n', t + 0.04);
+    synthFX.triggerAttackRelease('G6','16n', t + 0.08);
+    synthFX.triggerAttackRelease('C7','4n',  t + 0.12);
   },
-  hit(){ if(!soundOn||!toneReady) return;
-    // Comedy "wah wah wah wahhhhh~" sad trombone — classic fail sound
+  hit(){ if(!soundOn||!toneReady||!tromboneSynth) return;
+    // Classic sad-trombone "WAH-wah-wah-wah-waaaah" — pitch slides between every note
+    // thanks to MonoSynth's portamento. Sawtooth + lowpass = brassy trombone tone.
     const t = Tone.now();
-    // Temporary volume boost for impact
-    synthMain.volume.value = -2;
-    synthFX.volume.value  = -4;
-    const seq = [
-      { n1:'F4',  n2:'F3',  dur:'8n',  s:0.00 },
-      { n1:'D4',  n2:'D3',  dur:'8n',  s:0.15 },
-      { n1:'Bb3', n2:'Bb2', dur:'8n',  s:0.30 },
-      { n1:'F3',  n2:'F2',  dur:'2n',  s:0.45 },
-    ];
-    seq.forEach(p => {
-      synthMain.triggerAttackRelease(p.n1, p.dur, t + p.s);
-      synthFX.triggerAttackRelease(p.n2, p.dur, t + p.s);
-    });
-    // Restore normal volumes after the trombone finishes
-    setTimeout(() => {
-      synthMain.volume.value = -8;
-      synthFX.volume.value  = -10;
-    }, 1500);
+    tromboneSynth.triggerAttack('G4', t);
+    tromboneSynth.setNote('E4',  t + 0.20);
+    tromboneSynth.setNote('C4',  t + 0.40);
+    tromboneSynth.setNote('A3',  t + 0.60);
+    tromboneSynth.setNote('F3',  t + 0.90);  // final low note — sustains for that "deflated" sigh
+    tromboneSynth.triggerRelease(t + 1.45);
   },
   end(){ if(!soundOn||!toneReady) return;
     ['G4','E4','C4','A3'].forEach((n,i)=>synthMain.triggerAttackRelease(n,'8n', Tone.now()+i*.12));
@@ -717,14 +744,14 @@ function syncCharacterUI(){
   const avatar = document.getElementById('home-avatar');
   if(avatar){
     if(c.type === 'image') avatar.innerHTML = `<img src="${c.src}" alt="${c.name}">`;
-    else { avatar.innerHTML = ''; avatar.textContent = c.ico; avatar.style.fontSize = '26px'; }
+    else { avatar.innerHTML = `<span class="char-emoji" style="font-size:26px">${c.ico}</span>`; }
   }
   // Home char-btn (SeaDex entry)
   const btnIcon = document.getElementById('char-btn-icon');
   const btnName = document.getElementById('char-btn-name');
   if(btnIcon){
     if(c.type === 'image') btnIcon.innerHTML = `<img src="${c.src}" alt="${c.name}">`;
-    else { btnIcon.innerHTML = ''; btnIcon.textContent = c.ico; }
+    else btnIcon.innerHTML = `<span class="char-emoji">${c.ico}</span>`;
   }
   if(btnName) btnName.textContent = c.name;
   // Game overlay title
@@ -733,7 +760,7 @@ function syncCharacterUI(){
     if(c.type === 'image'){
       gt.innerHTML = `<img src="${c.src}" alt="" class="char-img-inline"> Tap to Dive!`;
     } else {
-      gt.textContent = `${c.ico} Tap to Dive!`;
+      gt.innerHTML = `<span class="char-emoji">${c.ico}</span> Tap to Dive!`;
     }
   }
 }
@@ -969,12 +996,13 @@ function spawnObstacle(x){
     passed: false,
   });
 
-  // Spawn a pearl in the gap (60% chance) — skill reward for precise threading.
-  // Position slightly offset from gap center so it isn't trivially auto-collected.
-  if(rnd() > 0.4){
+  // Spawn a pearl in the gap (45% chance) — skill reward for precise threading.
+  // Each pearl gives +5 score AND activates 1.5s BOOST (invincibility + 1.3x speed + 2x gate score).
+  // Position offset from gap center so it requires aim, not auto-collection.
+  if(rnd() > 0.55){
     G.pearls.push({
       x: x + OBSTACLE.WIDTH / 2,
-      y: gapY + OBSTACLE.GAP / 2 + (rnd() - 0.5) * (OBSTACLE.GAP * 0.35),
+      y: gapY + OBSTACLE.GAP / 2 + (rnd() - 0.5) * (OBSTACLE.GAP * 0.4),
       r: 11,
       phase: rnd() * Math.PI * 2,
       collected: false,
@@ -1016,9 +1044,12 @@ function update(){
     spawnObstacle(rightmostX);
   }
 
+  // Effective scroll speed — 1.3× during boost for the "thrust" feeling
+  const spd = G.boost.active ? G.scrollSpeed * 1.3 : G.scrollSpeed;
+
   // Move obstacles
   for(const ob of G.obstacles){
-    ob.x -= G.scrollSpeed;
+    ob.x -= spd;
     // Score when passed
     if(!ob.passed && ob.x + ob.width < G.player.x){
       ob.passed = true;
@@ -1026,7 +1057,10 @@ function update(){
       G.combo++;
       G.maxCombo = Math.max(G.maxCombo, G.combo);
       const mult = G.combo >= 6 ? 3 : G.combo >= 3 ? 2 : 1;
-      G.score += mult;
+      // Boost doubles the gate score — pearls really pay off
+      const boostMult = G.boost.active ? 2 : 1;
+      const gain = mult * boostMult;
+      G.score += gain;
       SFX.pass(G.combo);
       document.getElementById('game-score').textContent = G.score;
       document.getElementById('game-combo').textContent = '×' + mult;
@@ -1037,11 +1071,13 @@ function update(){
       if(G.combo === 3 || G.combo === 6 || G.combo === 10){
         spawnComboPopup(`COMBO ×${mult}!`);
         SFX.combo();
+      } else if(boostMult > 1){
+        spawnComboPopup(`+${gain} ⚡`);
       } else if(mult > 1){
-        spawnComboPopup(`+${mult}`);
+        spawnComboPopup(`+${gain}`);
       }
     }
-    // Collision (skipped during boost)
+    // Collision (skipped during boost — invincibility window)
     if(!G.boost.active && ob.x < G.player.x + G.player.r && ob.x + ob.width > G.player.x - G.player.r){
       if(G.player.y - G.player.r < ob.gapY || G.player.y + G.player.r > ob.gapY + ob.gap){
         gameOver();
@@ -1055,7 +1091,7 @@ function update(){
 
   // Move pearls + check collection
   for(const p of G.pearls){
-    p.x -= G.scrollSpeed;
+    p.x -= spd;
     p.phase += 0.08;
     if(!p.collected){
       const dx = p.x - G.player.x;
@@ -1064,11 +1100,14 @@ function update(){
         p.collected = true;
         G.score += 5;
         G.gems++;
+        // Activate BOOST mode — 1.5s of invincibility + 1.3x speed + 2x score per gate
+        G.boost.active = true;
+        G.boost.until = performance.now() + 1500;
         SFX.pearl();
         document.getElementById('game-score').textContent = G.score;
-        spawnComboPopup('💎 +5');
-        // Burst of bubbles for visual feedback
-        for(let i = 0; i < 8; i++){
+        spawnComboPopup('💎 BOOST!');
+        // Burst of golden bubbles for visual feedback
+        for(let i = 0; i < 12; i++){
           G.bubbles.push({
             x: p.x, y: p.y,
             r: 2 + Math.random() * 3,
@@ -1270,9 +1309,10 @@ function drawPlayer(cx, cy, rot){
   }
 
   ctx.rotate(rot);
+  // Flip horizontally so the character faces the direction of travel (right).
+  // Apple emoji (🐠🐬🦈 etc.) and our seahorse PNG all face LEFT natively.
+  ctx.scale(-1, 1);
   if(c.type === 'image'){
-    // Seahorse PNG is naturally drawn facing LEFT — flip so it faces direction of travel (right)
-    ctx.scale(-1, 1);
     const img = getSeahorseDrawable();
     if(img){
       const w = 44, h = 60;
@@ -1345,6 +1385,7 @@ async function endGame(){
   document.getElementById('result-best').textContent = bestLine;
   document.getElementById('res-combo').textContent = G.maxCombo;
   document.getElementById('res-corals').textContent = G.corals;
+  document.getElementById('res-gems').textContent = G.gems || 0;
   document.getElementById('replay-btn').style.display = G.mode === 'daily' ? 'none' : '';
   document.getElementById('result-modal').classList.remove('hidden');
 }
@@ -1358,6 +1399,60 @@ document.getElementById('result-home').addEventListener('click', () => {
   stopBGM();
   show('home-screen'); renderHome();
 });
+
+// ===== Share score =====
+function buildShareText(){
+  const c = getCurrentChar();
+  // For seahorse (no native emoji), use name only; for others use emoji + name
+  const charLabel = c.type === 'image' ? c.name : `${c.ico} ${c.name}`;
+  const gems = G.gems || 0;
+  const url = window.location.origin + window.location.pathname;
+  if(G.mode === 'daily'){
+    const today = dailyDateStr();
+    const streak = player.current_streak || 0;
+    const streakLine = streak > 1 ? ` · 🔥 ${streak}-day streak` : '';
+    return `🌊 WATER POP Daily ${today} — ${G.score} pts\n`
+         + `${charLabel} · max combo ×${G.maxCombo}${streakLine} · 💎 ${gems}\n`
+         + `Same reef for everyone today 👇\n${url}`;
+  }
+  return `🌊 WATER POP — ${G.score} pts!\n`
+       + `${charLabel} · max combo ×${G.maxCombo} · 💎 ${gems}\n`
+       + `Beat me 👉 ${url}`;
+}
+async function shareScore(){
+  const text = buildShareText();
+  const url = window.location.origin + window.location.pathname;
+  const shareData = { title: 'WATER POP', text, url };
+  // Web Share API — opens native share sheet on iOS, Android, modern Chrome desktop.
+  // Korean-American users with KakaoTalk installed see it in the share sheet.
+  if(navigator.share){
+    try {
+      await navigator.share(shareData);
+      return;
+    } catch(e){
+      if(e.name === 'AbortError') return; // user canceled — quietly do nothing
+      console.warn('navigator.share failed, falling back to clipboard:', e);
+    }
+  }
+  // Fallback: copy to clipboard + toast
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Copied! Paste anywhere to share 📋');
+  } catch(e){
+    // Final fallback: prompt with selectable text
+    prompt('Copy this to share:', text);
+  }
+}
+function showToast(msg, ms){
+  ms = ms || 2200;
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add('out'), ms - 300);
+  setTimeout(() => t.remove(), ms);
+}
+document.getElementById('share-btn').addEventListener('click', shareScore);
 
 // Sound toggle
 document.getElementById('sound-btn').addEventListener('click', () => {
