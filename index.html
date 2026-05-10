@@ -616,7 +616,7 @@ const G = {
 const PHYSICS = {
   BUOYANCY: -0.10,
   GRAVITY: 0.04,
-  DIVE_IMPULSE: 4.5,
+  DIVE_IMPULSE: 3.2,
   MAX_VY: 7,
   MIN_VY: -3,
 };
@@ -653,7 +653,7 @@ function startGame(mode){
   G.obstacles = [];
   G.bubbles = [];
   G.score = 0; G.combo = 0; G.maxCombo = 0; G.corals = 0;
-  G.scrollSpeed = 1.8;
+  G.scrollSpeed = 2.3;
   G.active = true;
   G.started = false;
   G.startTime = 0;
@@ -789,7 +789,7 @@ function update(){
 
   // Speed up over time
   if(G.score > 0 && G.score % 15 === 0){
-    G.scrollSpeed = Math.min(3.5, 1.8 + G.score * 0.015);
+    G.scrollSpeed = Math.min(4.0, 2.3 + G.score * 0.02);
   }
 }
 
